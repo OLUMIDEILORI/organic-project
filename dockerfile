@@ -1,14 +1,6 @@
 # Start from an official Python 3 image
 FROM python:3.9-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Set environment variables for Django
-ENV DJANGO_SETTINGS_MODULE=organic-project.settings
-ENV PYTHONUNBUFFERED=1
-
 # Set the working directory in the container
 WORKDIR /app
 
@@ -21,6 +13,12 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 COPY requirements.txt /app/
 RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=organic-project.settings
+ENV USE_DUMMY_DB=True  # Use dummy database for collectstatic
 
 # Copy the Django project into the working directory
 COPY . /app/
