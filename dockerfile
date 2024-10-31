@@ -5,6 +5,10 @@ FROM python:3.9-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Set environment variables for Django
+ENV DJANGO_SETTINGS_MODULE=your_project.settings
+ENV PYTHONUNBUFFERED=1
+
 # Set the working directory in the container
 WORKDIR /app
 
