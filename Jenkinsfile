@@ -2,68 +2,55 @@ pipeline {
     agent any
 
     environment {
-        // Docker image name and version based on Jenkins build number
-        IMAGE_NAME = "<DOCKERHUB_USERNAME>/django-app"
-        IMAGE_TAG = "${env.BUILD_ID}"
+        GIT_REPO_URL = 'https://github.com/OLUMIDEILORI/organic-project.git'
+        BRANCH_NAME = 'main'
+        DOCKER_IMAGE_NAME = 'your-django-app:latest'
+        AWS_INSTANCE_IP = '44.212.38.34'
+        SSH_KEY_PATH = credentials('olu-aws-ssh-key') // Using the added Jenkins SSH key
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                // Clone the Django project from GitHub
-                git branch: 'main', url: '<GITHUB_REPO_URL>'
+                git branch: BRANCH_NAME, url: GIT_REPO_URL
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    // Build Docker image
-                    dockerImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-                }
+                docker.build(DOCKER_IMAGE_NAME)
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Docker Image to Registry') {
             steps {
-                script {
-                    // Log in to Docker Hub and push the image
-                    docker.withRegistry('', 'docker-hub-credentials') {
-                        dockerImage.push()
-                        dockerImage.push("latest")
-                    }
-                }
+                sh "docker tag ${DOCKER_IMAGE_NAME} your-registry-url/${DOCKER_IMAGE_NAME}"
+                sh "docker push your-registry-url/${DOCKER_IMAGE_NAME}"
             }
         }
 
-        stage('Deploy to AWS EC2') {
+        stage('Deploy to AWS') {
             steps {
-                // Use SSH to deploy to a target EC2 instance
-                sshagent(credentials: ['ec2-ssh-credentials']) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no ec2-user@<TARGET_EC2_IP> "
-                        docker pull ${IMAGE_NAME}:${IMAGE_TAG} &&
-                        docker stop django-app || true &&
-                        docker rm django-app || true &&
-                        docker run -d -p 80:8000 --name django-app ${IMAGE_NAME}:${IMAGE_TAG}"
-                    '''
+                sshagent (credentials: ['olu-aws-ssh-key']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ubuntu@${AWS_INSTANCE_IP} << EOF
+                    docker pull your-registry-url/${DOCKER_IMAGE_NAME}
+                    docker stop \$(docker ps -q --filter ancestor=your-registry-url/${DOCKER_IMAGE_NAME})
+                    docker run -d -p 80:8000 your-registry-url/${DOCKER_IMAGE_NAME}
+                    EOF
+                    """
                 }
             }
         }
     }
 
     post {
-        always {
-            // Clean up unused Docker images to save space
-            script {
-                docker.image("${IMAGE_NAME}:${IMAGE_TAG}").remove()
-            }
-        }
         success {
-            echo 'Deployment was successful!'
+            echo 'Deployment completed successfully.'
         }
         failure {
-            echo 'Deployment failed. Please check the logs.'
+            echo 'Deployment failed.'
         }
     }
 }
+
