@@ -19,5 +19,8 @@ EXPOSE 8000
 # Define environment variable
 ENV DJANGO_SETTINGS_MODULE=myproject.settings
 
-# Run manage.py to start the server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Run migrations
+RUN python manage.py migrate
+
+# Run manage.py to start the server (consider using Gunicorn for production)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "myproject.wsgi:application"]
