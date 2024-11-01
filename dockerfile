@@ -19,7 +19,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Set environment variables for Django
-ENV DJANGO_SETTINGS_MODULE=organic-project.settings
+ENV DJANGO_SETTINGS_MODULE=myproject.settings
 # Use dummy database for collectstatic
 ENV USE_DUMMY_DB=True  
 
