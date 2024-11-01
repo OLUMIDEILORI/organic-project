@@ -1,43 +1,30 @@
 pipeline {
-    agent any
+    agent any 
 
     environment {
         GIT_REPO_URL = 'https://github.com/OLUMIDEILORI/organic-project.git'
         BRANCH_NAME = 'main'
-        DOCKER_IMAGE_NAME = 'iloriadewale22/your-django-app'  // Change 'your-django-app' as needed
-        IMAGE_TAG = 'latest'
-        AWS_INSTANCE_IP = '44.212.38.34'
-        SSH_KEY_PATH = credentials('olu-aws-ssh-key') // Jenkins SSH key ID
-        DOCKER_CREDENTIALS_ID = 'docker-credentials' // Docker Hub credentials ID
+        DOCKER_IMAGE_NAME = 'organic-django-app'
+        AWS_INSTANCE_IP = '3.83.151.2'
+        SSH_KEY_PATH = '/var/lib/jenkins/olu-aws-key.pem'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the code from the Git repository
-                git branch: BRANCH_NAME, url: GIT_REPO_URL
+                script {
+                    // Checkout the specified branch
+                    git branch: BRANCH_NAME, url: GIT_REPO_URL
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image with a specified tag
-                    docker.build("${DOCKER_IMAGE_NAME}:${IMAGE_TAG}")
-                }
-            }
-        }
-
-        stage('Push Docker Image to Docker Hub') {
-            steps {
-                script {
-                    // Login to Docker registry and push the image
-                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID,
-                                                      usernameVariable: 'DOCKER_USER',
-                                                      passwordVariable: 'DOCKER_PASS')]) {
-                        sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                        sh "docker tag ${DOCKER_IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
-                        sh "docker push ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
+                    // Build the Docker image from the Dockerfile in the current directory
+                    dir('.') {  // Using the root directory of the project
+                        docker.build(DOCKER_IMAGE_NAME)
                     }
                 }
             }
@@ -46,23 +33,21 @@ pipeline {
         stage('Deploy to AWS') {
             steps {
                 script {
-                    // Use SSH to connect to the AWS instance and deploy the Docker image
-                    sshagent (credentials: ['olu-aws-ssh-key']) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@${AWS_INSTANCE_IP} <<EOF
-                        # Stop running containers if they exist
-                        if [ "\$(docker ps -q --filter ancestor=${DOCKER_IMAGE_NAME}:${IMAGE_TAG})" ]; then
-                            docker stop \$(docker ps -q --filter ancestor=${DOCKER_IMAGE_NAME}:${IMAGE_TAG})
-                        fi
-                        
-                        # Pull the latest image
-                        docker pull ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
-                        
-                        # Run the container
-                        docker run -d -p 80:8000 ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
-                        EOF
-                        """
-                    }
+                    sh """
+                    ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ubuntu@${AWS_INSTANCE_IP} " \
+                    # Pull the latest Docker image \
+                    docker pull ${DOCKER_IMAGE_NAME} || true; \
+                    
+                    # Stop any running containers using the same image \
+                    CONTAINER_ID=\$(docker ps -q --filter 'ancestor=${DOCKER_IMAGE_NAME}'); \
+                    if [ -n '\$CONTAINER_ID' ]; then \
+                        docker stop \$CONTAINER_ID; \
+                        docker rm \$CONTAINER_ID; \
+                    fi; \
+                    
+                    # Run the new container \
+                    docker run -d -p 80:8000 ${DOCKER_IMAGE_NAME}"
+                    """
                 }
             }
         }
