@@ -6,7 +6,7 @@ pipeline {
         BRANCH_NAME = 'main'
         DOCKER_IMAGE_NAME = 'organic-django-app'
         AWS_INSTANCE_IP = '3.83.151.2'
-        SSH_KEY_PATH = '/var/lib/jenkins/olu-aws-key.pem'
+        SSH_KEY_PATH = '/var/lib/jenkins/olu-aws-ssh-key.pem'
     }
 
     stages {
