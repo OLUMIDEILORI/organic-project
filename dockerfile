@@ -17,8 +17,11 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+
+# Set environment variables for Django
 ENV DJANGO_SETTINGS_MODULE=organic-project.settings
-ENV USE_DUMMY_DB=True  # Use dummy database for collectstatic
+# Use dummy database for collectstatic
+ENV USE_DUMMY_DB=True  
 
 # Copy the Django project into the working directory
 COPY . /app/
