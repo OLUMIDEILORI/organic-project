@@ -50,8 +50,10 @@ pipeline {
                     sshagent (credentials: ['olu-aws-ssh-key']) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@${AWS_INSTANCE_IP} <<EOF
-                        # Stop running containers
-                        docker stop \$(docker ps -q --filter ancestor=${DOCKER_IMAGE_NAME}:${IMAGE_TAG}) || true
+                        # Stop running containers if they exist
+                        if [ "\$(docker ps -q --filter ancestor=${DOCKER_IMAGE_NAME}:${IMAGE_TAG})" ]; then
+                            docker stop \$(docker ps -q --filter ancestor=${DOCKER_IMAGE_NAME}:${IMAGE_TAG})
+                        fi
                         
                         # Pull the latest image
                         docker pull ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
