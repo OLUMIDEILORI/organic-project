@@ -4,7 +4,7 @@ pipeline {
     environment {
         GIT_REPO_URL = 'https://github.com/OLUMIDEILORI/organic-project.git'
         BRANCH_NAME = 'main'
-        DOCKER_IMAGE_NAME = 'iloriadewale22/your-django-app'  // Change 'your-django-app' as needed
+        DOCKER_IMAGE_NAME = 'iloriadewale22/your-django-app' // Change 'your-django-app' as needed
         IMAGE_TAG = 'latest'
         AWS_INSTANCE_IP = '44.212.38.34'
         SSH_KEY_PATH = credentials('olu-aws-ssh-key') // Jenkins SSH key ID
@@ -50,8 +50,13 @@ pipeline {
                     sshagent (credentials: ['olu-aws-ssh-key']) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@${AWS_INSTANCE_IP} << EOF
+                        # Pull the latest Docker image
                         docker pull ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
+                        
+                        # Stop any running containers based on the image
                         docker stop \$(docker ps -q --filter ancestor=${DOCKER_IMAGE_NAME}:${IMAGE_TAG}) || true
+                        
+                        # Run the Docker container in detached mode
                         docker run -d -p 80:8000 ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
                         EOF
                         """
